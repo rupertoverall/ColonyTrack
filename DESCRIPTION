@@ -1,0 +1,21 @@
+Package: ColonyTrack
+Type: Package
+Title: Analysis of Tracking Data From the Phenosys Colony Cage
+Version: 1.0.0
+Authors@R: person("Rupert", "Overall", email = "rtrack@rupertoverall.net",
+  role = c("aut", "cre"), comment = c(ORCID = "0000-0002-3882-6073"))
+Maintainer: Rupert Overall <rtrack@rupertoverall.net>
+Description: This package prepares raw timestamped Radio Frequency ID data into a standardised storage format, infers the position of each subject at each timepoint and extracts behavioural metrics.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+ByteCompile: true
+RoxygenNote: 7.2.0
+biocViews: behaviour
+Imports: 
+	crayon,
+	igraph,
+	IRanges,
+	pbapply,
+	Rfast,
+	fastmatch
