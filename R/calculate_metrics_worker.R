@@ -263,9 +263,9 @@ calculate_metrics_worker = function(window.data, log){
 			## Social interaction time
 			# NOTE This calculates the total _time_ spent with each other animal.
 			social.interaction.time = sapply(other.subjects, function(other){
-				shared.intervals = c(cage.presence.matrix.timestamp[(cage.sharing.matrix[, other])][-1], time.bounds[2]) - cage.presence.matrix.timestamp[(cage.sharing.matrix[, other])]
+				shared.intervals = (c(cage.presence.matrix.timestamp[-1], time.bounds[2]) - cage.presence.matrix.timestamp)[cage.sharing.matrix[, other]]
 				sum(shared.intervals, na.rm = T)
-			})
+			}) / 	diff(time.bounds)
 			max.social.interaction.time = max(social.interaction.time, na.rm = T)
 			mean.social.interaction.time = mean(social.interaction.time, na.rm = T)
 			min.social.interaction.time = min(social.interaction.time, na.rm = T)
@@ -519,14 +519,12 @@ calculate_metrics_worker = function(window.data, log){
 
 		clustering = list(
 			interaction.time = setNames(rep(NA, length(subjects)), subjects),
-			cage.sharing = setNames(rep(NA, length(subjects)), subjects),
 			social.distance = setNames(rep(NA, length(subjects)), subjects),
 			chasing = setNames(rep(NA, length(subjects)), subjects)
 		)
 		if(nrow(window.data$data[[subject]]) >= 3){ # If the animal did not move at all all night, consider it to be missing (first timestamp is previous cage, need at least two other timestamps to calculate an interval).
 			clustering$interaction.time[subjects] = c(setNames(1, subject), social.interaction.time)[subjects]
-			clustering$cage.sharing[subjects] = c(setNames(1, subject), Rfast::colsums(cage.presence.matrix[, other.subjects] == cage.presence.matrix[, subject], na.rm = T) / nrow(cage.presence.matrix))[subjects]
-			clustering$social.distance[subjects] = c(setNames(0, subject), distance.from.each)[subjects]
+			clustering$social.distance[subjects] = c(setNames(0, subject), setNames(distance.from.each, other.subjects))[subjects]
 			clustering$chasing[subjects] = c(setNames(0, subject), sapply(chase.events, nrow))[subjects]
 		}
 
@@ -552,7 +550,7 @@ calculate_metrics_worker = function(window.data, log){
 	diag(win.matrix) = NA
 	chase.means = colMeans(win.matrix, na.rm = T)
 	chase.means[is.nan(chase.means)] = NA # Turn NaNs also into NA.
-	chase.sds = colVars(win.matrix, na.rm = T)
+	chase.sds = sqrt(colVars(win.matrix, na.rm = T))
 	chase.sds[is.nan(chase.sds)] = NA # Turn NaNs also into NA.
 	for(subject in subjects){
 		results[[subject]]$individual["mean.chase.wins"] = chase.means[subject]
