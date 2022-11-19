@@ -48,7 +48,6 @@
 #'
 #' @seealso \code{\link{read_data}}.
 #'
-#'
 #' @importFrom stats setNames na.omit median sd
 #' @importFrom utils head packageVersion
 #' @importFrom pbapply pboptions pblapply
