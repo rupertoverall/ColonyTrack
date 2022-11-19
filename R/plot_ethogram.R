@@ -32,10 +32,14 @@
 #'  a logical vector). Default is to include all subjects present in the input
 #'  data file. If a vector of subjects is supplied, the resulting plot will
 #'  respect the ordering of this vector.
-#'@param plot A character vector describing which behavioural categories ('activity', 'sociality' and 'exploration') should be plotted. Abbreviations may also be used. The default, 'all', plots all
-#'  three categories mixed using a colour model determined by the parameter
-#'  'scheme'. Note that if 'all' is present in any of the elements of this
-#'  argument, then it will override any other elements.
+#'@param plot A character vector describing which behavioural categories
+#'  ('activity', 'sociality' and 'exploration') should be plotted. Abbreviations
+#'  may also be used. The default, 'all', plots all three categories mixed using
+#'  a colour model determined by the parameter 'scheme'. Note that if 'all' is
+#'  present in any of the elements of this argument, then it will override any
+#'  other elements. If \code{plot} is \code{FALSE}, then all plotting is
+#'  suppressed and only the ethogram colours and components are returned (see
+#'  below).
 #'@param scheme A code specifying the colour scheme to be used. See Details for
 #'  information on the available schemes. Default is 'yrb'.
 #'@param file An optional filename for PDF output. If supplied, the plot will be
@@ -51,6 +55,10 @@
 #'@param mar The margins surrounding the plot (see \code{\link{par}}). Can be
 #'  overridden for different length ID labels or to match different sized plot
 #'  devices.
+#'
+#'@return Invisibly returns a list with the components 'ethogram' (a matrix of
+#'  the colours of each cell), and 'activity', 'sociality' and 'exploration'
+#'  (matrices with the values for each component respectively).
 #'
 #'@importFrom graphics par segments
 #'@importFrom grDevices col2rgb colorRampPalette rgb rgb2hsv
@@ -155,18 +163,19 @@ plot_ethogram = function(metrics, days = "all", subjects = "all", plot = "all", 
 	if(is.null(width)) width = (200 + ncol(ethogram) / 4)
 	if(is.null(height)) height = (50 + nrow(ethogram) * 2)
 	if(!is.null(file)) pdf(file = file, width = width / 25.4, height = height / 25.4)
-	.parprevious = graphics::par(mar = mar)
-	on.exit(par(.parprevious))
+	if(plot != FALSE){
+			.parprevious = graphics::par(mar = mar)
+		on.exit(par(.parprevious))
 
-	plot(NA, xlim = c(1, ncol(ethogram) + 1 ), ylim = c(1, nrow(ethogram) + 1), type = "n", las = 2, bty = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", xpd =F)
-	for(n in 1:nrow(ethogram)){
-		# Plot from top to bottom - the reverse of the default behaviour.
-		rect(1:ncol(ethogram), nrow(ethogram) - n + 0.5, 1:ncol(ethogram) + 1, nrow(ethogram) - n + 1.5, col = ethogram[n, ], border = NA)
+		plot(NA, xlim = c(1, ncol(ethogram) + 1 ), ylim = c(1, nrow(ethogram) + 1), type = "n", las = 2, bty = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", xpd = F)
+		for(n in 1:nrow(ethogram)){
+			# Plot from top to bottom - the reverse of the default behaviour.
+			rect(1:ncol(ethogram), nrow(ethogram) - n + 0.5, 1:ncol(ethogram) + 1, nrow(ethogram) - n + 1.5, col = ethogram[n, ], border = NA)
+		}
+		axis(2, at = (nrow(ethogram):1), labels = gsub("-", "\uad", rownames(ethogram)), cex.axis = cex.axis, las = las, line = 0)
+		axis(1, at = (seq_along(days) - 1) * 12 + 0.5, labels = days, cex.axis = cex.axis, las = las, lwd = 0, line = -1)
+		if(!is.null(file)) dev.off()
 	}
-	axis(2, at = (nrow(ethogram):1), labels = gsub("-", "\uad", rownames(ethogram)), cex.axis = cex.axis, las = las, line = 0)
-	axis(1, at = (seq_along(days) - 1) * 12 + 0.5, labels = days, cex.axis = cex.axis, las = las, lwd = 0, line = -1)
-	if(!is.null(file)) dev.off()
-
 	invisible(list(ethogram = ethogram, activity = activity, sociality = sociality, exploration = exploration))
 }
 
