@@ -261,7 +261,6 @@ calculate_metrics = function(data, days = "all", drop.days = NULL, subjects = "a
 
 	clustering = list(
 		interaction.time = interaction.time.clustering,
-		cage.share = cage.share.clustering,
 		social.distance = social.distance.clustering,
 		chasing = chase.count.clustering
 	)
