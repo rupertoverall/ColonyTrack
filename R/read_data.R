@@ -13,10 +13,10 @@
 #' actogram (produced by \code{\link{plot}} of the \code{colonytrack_data}
 #' object) can be used to identify such missing blocks.
 #'
-#' @param dataFiles A vector of filenames. Each file is a CSV dump from the
-#'   PhenoSys system. These files should cover a contiguous period encompassing
-#'   the whole experiment. Files can be given as full pathnames so that the
-#'   often large data volumes can be stored outside the analysis directory (for
+#' @param dataFiles A vector of filenames. Each file is a CSV dump of antenna
+#'   contact data. These files should cover a contiguous period encompassing the
+#'   whole experiment. Files can be given as full pathnames so that the often
+#'   large data volumes can be stored outside the analysis directory (for
 #'   example on an external fileserver). Any file format readable by
 #'   \code{\link[utils]{read.table}} can be used.
 #' @param subjectFile A tab-delimited file describing the subjects/animals. This
