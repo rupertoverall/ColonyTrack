@@ -262,7 +262,7 @@ calculate_metrics = function(data, days = "all", drop.days = NULL, subjects = "a
 	clustering = list(
 		interaction.time = interaction.time.clustering,
 		social.distance = social.distance.clustering,
-		chasing = chase.count.clustering
+		chasing = t(chase.count.clustering) # Note that this is now row-dominant (for compatibility with most other packages).
 	)
 
 	dominance = lapply(chase.count.clustering, function(network) colSums(sign(network - t(network)), na.rm = T) )
