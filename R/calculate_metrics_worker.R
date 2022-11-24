@@ -225,7 +225,7 @@ calculate_metrics_worker = function(window.data, log){
 			peak.active.timepoint = 0
 			number.activity.blocks = 0
 			if(nrow(window.data$data[[subject]]) > 0){
-				activity.density = stats::density(window.data$data[[subject]]$Timestamp[-1])
+				activity.density = stats::density(window.data$data[[subject]]$Timestamp[-1], bw = "SJ", adjust = 2, kernel = "cosine")
 				within.interval = which(activity.density$x > time.bounds[1] & activity.density$x < time.bounds[2])
 				activity.density$x = activity.density$x[within.interval] - time.bounds[1]
 				activity.density$y = activity.density$y[within.interval]
