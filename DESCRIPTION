@@ -1,7 +1,7 @@
 Package: ColonyTrack
 Type: Package
 Title: Analysis of Multi-Subject Tracking Data from Interconnected Cage Networks
-Version: 1.0.1
+Version: 1.0.2
 Authors@R: person("Rupert", "Overall", email = "rtrack@rupertoverall.net",
   role = c("aut", "cre"), comment = c(ORCID = "0000-0002-3882-6073"))
 Maintainer: Rupert Overall <rtrack@rupertoverall.net>
@@ -10,7 +10,7 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 ByteCompile: true
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.2
 biocViews: behaviour
 Imports: 
 	crayon,
