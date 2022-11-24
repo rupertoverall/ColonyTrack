@@ -255,7 +255,7 @@ calculate_metrics = function(data, days = "all", drop.days = NULL, subjects = "a
 			missing = which(is.na(distance.metrics[n, ]) | is.na(distance.metrics[, n]))
 			distance.metrics[missing, n] = distance.metrics[n, missing] = NA
 		}
-		return(distance.metrics)
+		return(t(distance.metrics)) # Note that this is now row-dominant (for compatibility with most other packages).
 	})
 	names(chase.count.clustering) = window.definitions$id
 
