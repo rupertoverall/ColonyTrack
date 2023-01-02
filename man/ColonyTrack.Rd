@@ -5,7 +5,7 @@
 \alias{ColonyTrack}
 \title{Analysis of Multi-Subject Tracking Data from Interconnected Cage Networks.}
 \description{
-This package prepares raw timestamped Radio Frequency ID data into a standardised storage format, infers the position of each subject at each timepoint and extracts behavioural metrics.
+This package prepares raw timestamped Radio Frequency ID data into a standardised storage format, infers the position of each subject at each time point and extracts behavioural metrics.
 }
 \section{Functions provided}{
 
