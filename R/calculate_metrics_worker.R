@@ -48,7 +48,7 @@ calculate_metrics_worker = function(window.data, log){
 		social.interaction.time = NULL
 		distance.from.each = NULL
 		cage.probability = setNames(rep(NA, length(colnames(window.data$layout$shortest.paths))), colnames(window.data$layout$shortest.paths))
-		chase.events = NULL
+		follow.events = NULL
 
 		if(nrow(window.data$data[[subject]]) < 3){ # If the animal did not move at all all night, consider it to be missing (first timestamp is previous cage, need at least two other timestamps to calculate an interval).
 			individual = get_na_defaults()
@@ -57,7 +57,7 @@ calculate_metrics_worker = function(window.data, log){
 				return(list(ethogram.activity = NA, ethogram.sociality = NA, ethogram.exploration = NA))
 			})
 			#
-			chase.events = setNames(lapply(subjects, function(id) data.frame(Timestamp = numeric(),  TransitionFrom = character(),  TransitionTo = character()) ), subjects)
+			follow.events = setNames(lapply(subjects, function(id) data.frame(Timestamp = numeric(),  TransitionFrom = character(),  TransitionTo = character()) ), subjects)
 		}else{
 			## Length of time in each cage.
 			time.in.cage = diff(window.data$data[[subject]]$Timestamp[-1]) # Only include intervals completely within the window.
@@ -348,25 +348,25 @@ calculate_metrics_worker = function(window.data, log){
 			median.influence = stats::median(cage.occupancy.influence, na.rm = T)
 			lower.influence = unname(sorted.cage.occupancy.influence)[floor(length(sorted.cage.occupancy.influence) * .05)]
 
-			## Chasing.
+			## Following.
 			## How often was this animal in close pursuit of each other animal?
 			## Every cage entry (in the same direction) up to 1 s after another animal is recorded. Returned values are sums.
 			# Timestamps converted to relative millisecond integers for IRanges.
 			icole = data.frame(Timestamp = (window.data$data[[subject]]$Timestamp[-1] - time.bounds[1]) * 1000, From = window.data$data[[subject]]$Cage[-nrow(window.data$data[[subject]])], To = window.data$data[[subject]]$Cage[-1])
-			# Chase interval starts 1000 ms before cage transition.
+			# Following interval starts 1000 ms before cage transition.
 			icoler = IRanges::IRanges(start = icole$Timestamp - 1000, end = icole$Timestamp - 1)
-			chase.events = lapply(other.subjects, function(other){
+			follow.events = lapply(other.subjects, function(other){
 				jcole = data.frame(Timestamp = (window.data$data[[other]]$Timestamp[-1] - time.bounds[1]) * 1000, From = window.data$data[[other]]$Cage[-nrow(window.data$data[[other]])], To = window.data$data[[other]]$Cage[-1])
 				jcoler = IRanges::IRanges(start = jcole$Timestamp, end = jcole$Timestamp)
 				overlaps = IRanges::findOverlaps(icoler, jcoler)
-				chase = Rfast::rowsums(icole[IRanges::from(overlaps), c("From", "To")] == jcole[IRanges::to(overlaps), c("From", "To")]) == 2
-				chase.result = icole[IRanges::from(overlaps)[chase], ]
-				chase.result$Timestamp = chase.result$Timestamp / 1000 + time.bounds[1]
-				return(chase.result)
+				follow = Rfast::rowsums(icole[IRanges::from(overlaps), c("From", "To")] == jcole[IRanges::to(overlaps), c("From", "To")]) == 2
+				follow.result = icole[IRanges::from(overlaps)[follow], ]
+				follow.result$Timestamp = follow.result$Timestamp / 1000 + time.bounds[1]
+				return(follow.result)
 			})
-			names(chase.events) = other.subjects
-			chase.events[[subject]] = data.frame(Timestamp = numeric(),  Transition = character())
-			chase.events = chase.events[subjects]
+			names(follow.events) = other.subjects
+			follow.events[[subject]] = data.frame(Timestamp = numeric(),  Transition = character())
+			follow.events = follow.events[subjects]
 
 			# Ethogram data.
 			# This is prepared hourly.
@@ -503,10 +503,10 @@ calculate_metrics_worker = function(window.data, log){
 				upper.influence = c(as.double(upper.influence), NA)[1],
 				median.influence = c(as.double(median.influence), NA)[1],
 				lower.influence = c(as.double(lower.influence), min.influence)[1],
-				number.chase.events = c(as.double(sum(sapply(chase.events, nrow))), NA)[1],
-				sd.chase.events = c(as.double(sd(sapply(chase.events, nrow))), NA)[1],
-				mean.chase.wins = NA, # Placeholder: value calculated below.
-				sd.chase.wins = NA # Placeholder: value calculated below.
+				number.follow.events = c(as.double(sum(sapply(follow.events, nrow))), NA)[1],
+				sd.follow.events = c(as.double(sd(sapply(follow.events, nrow))), NA)[1],
+				mean.follow.wins = NA, # Placeholder: value calculated below.
+				sd.follow.wins = NA # Placeholder: value calculated below.
 			)
 		}
 
@@ -520,12 +520,12 @@ calculate_metrics_worker = function(window.data, log){
 		clustering = list(
 			interaction.time = setNames(rep(NA, length(subjects)), subjects),
 			social.distance = setNames(rep(NA, length(subjects)), subjects),
-			chasing = setNames(rep(NA, length(subjects)), subjects)
+			following = setNames(rep(NA, length(subjects)), subjects)
 		)
 		if(nrow(window.data$data[[subject]]) >= 3){ # If the animal did not move at all all night, consider it to be missing (first timestamp is previous cage, need at least two other timestamps to calculate an interval).
 			clustering$interaction.time[subjects] = c(setNames(1, subject), social.interaction.time)[subjects]
 			clustering$social.distance[subjects] = c(setNames(0, subject), setNames(distance.from.each, other.subjects))[subjects]
-			clustering$chasing[subjects] = c(setNames(0, subject), sapply(chase.events, nrow))[subjects]
+			clustering$following[subjects] = c(setNames(0, subject), sapply(follow.events, nrow))[subjects]
 		}
 
 		end.time = Sys.time()
@@ -535,7 +535,7 @@ calculate_metrics_worker = function(window.data, log){
 			elapsed.time = as.numeric(end.time) - as.numeric(start.time)
 		)
 
-		subject.results = list(window = window.data$window.definition["id"], subject = subject, individual = individual, cage.probability = cage.probability, ethogram = ethogram, clustering = clustering, chase.events = chase.events, dev = dev)
+		subject.results = list(window = window.data$window.definition["id"], subject = subject, individual = individual, cage.probability = cage.probability, ethogram = ethogram, clustering = clustering, follow.events = follow.events, dev = dev)
 		if(log) file.create(paste0("colonytrack.progress/", window.data$window.definition["id"], "_", subject))
 
 		return(subject.results)
@@ -543,18 +543,18 @@ calculate_metrics_worker = function(window.data, log){
 	names(results) = subjects
 
 
-	# How often does each animal win in a chase conflict?
+	# How often does each animal win in a follow encounter?
 	## This needs the full subject matrix, so is calculated here.
-	chase.matrix = sapply(results, function(result) result$clustering$chasing )
-	win.matrix = chase.matrix / (chase.matrix + t(chase.matrix))
+	follow.matrix = sapply(results, function(result) result$clustering$following )
+	win.matrix = follow.matrix / (follow.matrix + t(follow.matrix))
 	diag(win.matrix) = NA
-	chase.means = colMeans(win.matrix, na.rm = T)
-	chase.means[is.nan(chase.means)] = NA # Turn NaNs also into NA.
-	chase.sds = sqrt(colVars(win.matrix, na.rm = T))
-	chase.sds[is.nan(chase.sds)] = NA # Turn NaNs also into NA.
+	follow.means = colMeans(win.matrix, na.rm = T)
+	follow.means[is.nan(follow.means)] = NA # Turn NaNs also into NA.
+	follow.sds = sqrt(colVars(win.matrix, na.rm = T))
+	follow.sds[is.nan(follow.sds)] = NA # Turn NaNs also into NA.
 	for(subject in subjects){
-		results[[subject]]$individual["mean.chase.wins"] = chase.means[subject]
-		results[[subject]]$individual["chase.sds"] = chase.sds[subject]
+		results[[subject]]$individual["mean.follow.wins"] = follow.means[subject]
+		results[[subject]]$individual["follow.sds"] = follow.sds[subject]
 	}
 
 	rm(window.data)

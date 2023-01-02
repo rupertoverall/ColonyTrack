@@ -64,10 +64,10 @@ combine_metrics = function(metrics.list){
 	metrics$clustering$interaction.time = lapply(do.call("c", lapply(metrics.list, function(m){ m$clustering$interaction.time }))[ordered], function(m) m[metrics$info$subjects, metrics$info$subjects] )
 	metrics$clustering$cage.share = lapply(do.call("c", lapply(metrics.list, function(m){ m$clustering$cage.share }))[ordered], function(m) m[metrics$info$subjects, metrics$info$subjects] )
 	metrics$clustering$social.distance = lapply(do.call("c", lapply(metrics.list, function(m){ m$clustering$social.distance }))[ordered], function(m) m[metrics$info$subjects, metrics$info$subjects] )
-	metrics$clustering$chasing = lapply(do.call("c", lapply(metrics.list, function(m){ m$clustering$chasing }))[ordered], function(m) m[metrics$info$subjects, metrics$info$subjects] )
+	metrics$clustering$following = lapply(do.call("c", lapply(metrics.list, function(m){ m$clustering$following }))[ordered], function(m) m[metrics$info$subjects, metrics$info$subjects] )
 
 	metrics$dominance = lapply(do.call("c", lapply(metrics.list, "[[", "dominance"))[ordered], function(v) v[metrics$info$subjects] )
-	metrics$chase.events = lapply(do.call("c", lapply(metrics.list, "[[", "chase.events"))[ordered], function(l){
+	metrics$follow.events = lapply(do.call("c", lapply(metrics.list, "[[", "follow.events"))[ordered], function(l){
 		lapply(l[metrics$info$subjects], function(ll) ll[metrics$info$subjects] )
 	})
 

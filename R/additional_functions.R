@@ -109,10 +109,10 @@ get_defaults = function(metrics.vector = NULL){ # This returns data with missing
 		upper.influence = c(stats::na.omit(metrics.vector["max.influence"]), 0)[1],
 		median.influence = c(stats::na.omit(metrics.vector["median.influence"]), 0)[1],
 		lower.influence = c(stats::na.omit(metrics.vector["min.influence"]), 0)[1],
-		number.chase.events = c(stats::na.omit(metrics.vector["number.chase.events"]), 0)[1],
-		sd.chase.events = c(stats::na.omit(metrics.vector["sd.chase.events"]), 0)[1],
-		mean.chase.wins = c(stats::na.omit(metrics.vector["mean.chase.wins"]), 0)[1],
-		sd.chase.wins = c(stats::na.omit(metrics.vector["sd.chase.wins"]), 0)[1]
+		number.follow.events = c(stats::na.omit(metrics.vector["number.follow.events"]), 0)[1],
+		sd.follow.events = c(stats::na.omit(metrics.vector["sd.follow.events"]), 0)[1],
+		mean.follow.wins = c(stats::na.omit(metrics.vector["mean.follow.wins"]), 0)[1],
+		sd.follow.wins = c(stats::na.omit(metrics.vector["sd.follow.wins"]), 0)[1]
 	))
 }
 

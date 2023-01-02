@@ -187,8 +187,8 @@ calculate_metrics = function(data, days = "all", drop.days = NULL, subjects = "a
 			social.distance = f[, "mean.distance.from.all"], # Mean distance from all others (in cage units).
 			social.gradient = f[, "mean.sharing.change"], # Was the cage change to a more- or less-populated cage?
 			social.influence = f[, "mean.influence"], # How many animals were in the cage in the 5 s after leaving it, vs. the number that were in the cage before and during occupancy?
-			chase.events = f[, "number.chase.events"],
-			chase.dominance = f[, "mean.chase.wins"]
+			follow.events = f[, "number.follow.events"],
+			follow.dominance = f[, "mean.follow.wins"]
 		)
 		rownames(individual.features) = rownames(f)
 		return(individual.features)
@@ -223,18 +223,6 @@ calculate_metrics = function(data, days = "all", drop.days = NULL, subjects = "a
 	})
 	names(interaction.time.clustering) = window.definitions$id
 
-	cage.share.clustering = lapply(window.metrics, function(window){
-		cage.sharing.metrics = sapply(lapply(window, "[[", "clustering"), "[[", "cage.sharing")
-		rownames(cage.sharing.metrics) = colnames(cage.sharing.metrics)
-		# Make symmetrical regarding missing data.
-		for(n in colnames(cage.sharing.metrics)){
-			missing = which(is.na(cage.sharing.metrics[n, ]) | is.na(cage.sharing.metrics[, n]))
-			cage.sharing.metrics[missing, n] = cage.sharing.metrics[n, missing] = NA
-		}
-		return(cage.sharing.metrics)
-	})
-	names(cage.share.clustering) = window.definitions$id
-
 	social.distance.clustering = lapply(window.metrics, function(window){
 		distance.metrics = sapply(lapply(window, "[[", "clustering"), "[[", "social.distance")
 		rownames(distance.metrics) = colnames(distance.metrics)
@@ -247,8 +235,8 @@ calculate_metrics = function(data, days = "all", drop.days = NULL, subjects = "a
 	})
 	names(social.distance.clustering) = window.definitions$id
 
-	chase.count.clustering = lapply(window.metrics, function(window){
-		distance.metrics = sapply(lapply(window, "[[", "clustering"), "[[", "chasing")
+	follow.count.clustering = lapply(window.metrics, function(window){
+		distance.metrics = sapply(lapply(window, "[[", "clustering"), "[[", "following")
 		rownames(distance.metrics) = colnames(distance.metrics)
 		# Make symmetrical regarding missing data.
 		for(n in colnames(distance.metrics)){
@@ -257,20 +245,20 @@ calculate_metrics = function(data, days = "all", drop.days = NULL, subjects = "a
 		}
 		return(t(distance.metrics)) # Note that this is now row-dominant (for compatibility with most other packages).
 	})
-	names(chase.count.clustering) = window.definitions$id
+	names(follow.count.clustering) = window.definitions$id
 
 	clustering = list(
 		interaction.time = interaction.time.clustering,
 		social.distance = social.distance.clustering,
-		chasing = chase.count.clustering
+		following = follow.count.clustering
 	)
 
-	dominance = lapply(chase.count.clustering, function(network) colSums(sign(network - t(network)), na.rm = T) )
+	dominance = lapply(follow.count.clustering, function(network) colSums(sign(network - t(network)), na.rm = T) )
 
-	chase.events = lapply(window.metrics, function(window){
-		lapply(window, "[[", "chase.events")
+	follow.events = lapply(window.metrics, function(window){
+		lapply(window, "[[", "follow.events")
 	})
-	names(chase.events) = window.definitions$id
+	names(follow.events) = window.definitions$id
 
 	end.time = Sys.time()
 
@@ -305,7 +293,7 @@ calculate_metrics = function(data, days = "all", drop.days = NULL, subjects = "a
 		ethogram = ethogram,
 		clustering = clustering,
 		dominance = dominance,
-		chase.events = chase.events,
+		follow.events = follow.events,
 		development = development
 	)
 
