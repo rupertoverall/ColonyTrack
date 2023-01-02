@@ -160,6 +160,9 @@ plot_ethogram = function(metrics, days = "all", subjects = "all", plot = "all", 
 
 	rownames(ethogram) = subjects
 
+	# This enables flexible-width windows to be plotted. (TODO but is not guaranteed bug-free in edge cases yet)
+	hours.per.day = sapply(metrics$ethogram[days], function(e) ncol(e$activity) )
+
 	if(is.null(width)) width = (200 + ncol(ethogram) / 4)
 	if(is.null(height)) height = (50 + nrow(ethogram) * 2)
 	if(!is.null(file)) pdf(file = file, width = width / 25.4, height = height / 25.4)
@@ -173,7 +176,7 @@ plot_ethogram = function(metrics, days = "all", subjects = "all", plot = "all", 
 			rect(1:ncol(ethogram), nrow(ethogram) - n + 0.5, 1:ncol(ethogram) + 1, nrow(ethogram) - n + 1.5, col = ethogram[n, ], border = NA)
 		}
 		axis(2, at = (nrow(ethogram):1), labels = gsub("-", "\uad", rownames(ethogram)), cex.axis = cex.axis, las = las, line = 0)
-		axis(1, at = (seq_along(days) - 1) * 12 + 0.5, labels = days, cex.axis = cex.axis, las = las, lwd = 0, line = -1)
+		axis(1, at = (seq_along(days) - 1) * hours.per.day + 0.5, labels = days, cex.axis = cex.axis, las = las, lwd = 0, line = -1)
 		if(!is.null(file)) dev.off()
 	}
 	invisible(list(ethogram = ethogram, activity = activity, sociality = sociality, exploration = exploration))
