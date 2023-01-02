@@ -7,7 +7,7 @@ The ColonyTrack package
 
 ColonyTrack is an R package to process raw data from interconnected home-cage tracking systems. In addition to generating pre-processed data and quality control information, a range of high-level metrics are calculated together with convenient tools for analysis.
 
-\* *This is the development version.*
+
 
 Install
 -----------------------------------------------------------------------------------------------------------
