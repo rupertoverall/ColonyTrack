@@ -265,7 +265,7 @@ calculate_metrics_worker = function(window.data, log){
 			social.interaction.time = sapply(other.subjects, function(other){
 				shared.intervals = (c(cage.presence.matrix.timestamp[-1], time.bounds[2]) - cage.presence.matrix.timestamp)[cage.sharing.matrix[, other]]
 				sum(shared.intervals, na.rm = T)
-			}) / 	diff(time.bounds)
+			}) / diff(time.bounds)
 			max.social.interaction.time = max(social.interaction.time, na.rm = T)
 			mean.social.interaction.time = mean(social.interaction.time, na.rm = T)
 			min.social.interaction.time = min(social.interaction.time, na.rm = T)
@@ -286,6 +286,7 @@ calculate_metrics_worker = function(window.data, log){
 			distance.matrix = apply(dcpi[, other.subjects], 2, function(jx){
 				window.data$layout$shortest.paths[matrix.unmap(ix, jx, dim(window.data$layout$shortest.paths))]
 			})
+			intervals = diff(c(cage.presence.matrix.timestamp, time.bounds[2]))
 			distance.from.all = Rfast::rowsums(distance.matrix, na.rm = T) / Rfast::rowsums(!is.na(distance.matrix), na.rm = T)
 			if(all(is.na(distance.from.all))) distance.from.all = max(window.data$layout$shortest.paths) + 1
 			max.distance.from.all = max(distance.from.all, na.rm = T)
@@ -298,6 +299,7 @@ calculate_metrics_worker = function(window.data, log){
 			lower.distance.from.all = unname(sorted.distances)[floor(length(sorted.distances) * .05)]
 
 			distance.from.each = Rfast::colsums(distance.matrix, na.rm = T) / Rfast::colsums(!is.na(distance.matrix), na.rm = T)
+			weighted.distance.from.each = Rfast::colsums(distance.matrix * intervals, na.rm = T) / diff(time.bounds)
 			if(all(is.na(distance.from.each))) distance.from.each = max(window.data$layout$shortest.paths) + 1
 			max.distance.from.each = max(distance.from.each, na.rm = T)
 			#mean.distance.from.each = mean(distance.from.each, na.rm = T) # Same as mean.distance.from.all
@@ -524,7 +526,7 @@ calculate_metrics_worker = function(window.data, log){
 		)
 		if(nrow(window.data$data[[subject]]) >= 3){ # If the animal did not move at all all night, consider it to be missing (first timestamp is previous cage, need at least two other timestamps to calculate an interval).
 			clustering$interaction.time[subjects] = c(setNames(1, subject), social.interaction.time)[subjects]
-			clustering$social.distance[subjects] = c(setNames(0, subject), setNames(distance.from.each, other.subjects))[subjects]
+			clustering$social.distance[subjects] = c(setNames(0, subject), setNames(weighted.distance.from.each, other.subjects))[subjects]
 			clustering$following[subjects] = c(setNames(0, subject), sapply(follow.events, nrow))[subjects]
 		}
 
