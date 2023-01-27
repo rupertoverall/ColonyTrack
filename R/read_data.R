@@ -169,7 +169,7 @@ read_data = function(dataFiles, subjectFile, networkFile, eventsFile, cageQualit
 
 	# Make sure all raw.data are in chronological order
 	# Convert timestamp (in fractions of days from SQL origin) to seconds (using POSIX origin)
-	raw.data$Timestamp = as.numeric(as.POSIXct(raw.data$Timestamp * 86400, origin="1899-12-30 00:00:00", tz="UTC"))
+	raw.data$Timestamp = as.numeric(as.POSIXct(raw.data$Timestamp * 86400, origin = "1899-12-30 00:00:00", tz = "UTC"))
 	msg("Checking timestamp chronology")
 	raw.data = raw.data[Rfast::sort_cor_vectors(seq_along(raw.data$Timestamp), raw.data$Timestamp, stable = T), ]
 	# Clean up raw data and add proper IDs and accurate timestamp.
@@ -282,7 +282,7 @@ read_data = function(dataFiles, subjectFile, networkFile, eventsFile, cageQualit
 						this.block = which(datetime >= light.cycle.blocks[i, "Start"] & datetime <= light.cycle.blocks[i, "End"])
 						lights.on = unlist(strsplit(format(light.cycle.blocks[i, "Value"], format = "%Y-%m-%d %H:%M:%S"), " "))
 						ZT0 = strptime(paste0(time$Day[this.block], " ", lights.on[2]), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
-						previous.days = as.character(format(as.POSIXct(time$Day[this.block]) - (3600 * 24), format="%F"))
+						previous.days = as.character(format(as.POSIXct(time$Day[this.block], tz = "UTC") - (3600 * 24), format="%F"))
 						ZT0.previous = strptime(paste0(previous.days, " ", lights.on[2]), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 						time$ZTDay[this.block] = format(time$Day[this.block], format="%F")
 						time$ZT[this.block] = (as.numeric(time$DateTime[this.block]) - as.numeric(ZT0)) / 3600
