@@ -18,6 +18,7 @@ calculate_metrics_worker = function(window.data, log){
 	# Calculate the cage presence matrix.
 	## Get list of _all_ antenna contacts and work out which animals were in which cage.
 	cage.presence.matrix.timestamp = sort(Reduce(union, lapply(window.data$data, "[[", "Timestamp")))
+	cage.presence.weighting = diff(c(cage.presence.matrix.timestamp, time.bounds[2])) / diff(time.bounds)
 	cage.presence.matrix = sapply(seq_along(window.data$data), function(i){
 		indices = cumsum(!is.na(fastmatch::fmatch(cage.presence.matrix.timestamp, window.data$data[[i]]$Timestamp)))
 		indices[indices == 0] = NA
@@ -245,9 +246,10 @@ calculate_metrics_worker = function(window.data, log){
 			other.subjects = setdiff(subjects, subject)
 			cage.sharing.matrix = cage.presence.matrix[, other.subjects] == cage.presence.matrix[, subject]
 			cage.sharing = Rfast::rowsums(cage.sharing.matrix, na.rm = T)
+			weighted.cage.sharing = cage.sharing * cage.presence.weighting
 
 			max.cage.sharing = max(cage.sharing, na.rm = T)
-			mean.cage.sharing = mean(cage.sharing, na.rm = T)
+			mean.cage.sharing = sum(weighted.cage.sharing)
 			min.cage.sharing = min(cage.sharing, na.rm = T)
 			sd.cage.sharing = sd(cage.sharing, na.rm = T)
 			sorted.cage.sharing = sort(cage.sharing)
@@ -286,11 +288,11 @@ calculate_metrics_worker = function(window.data, log){
 			distance.matrix = apply(dcpi[, other.subjects], 2, function(jx){
 				window.data$layout$shortest.paths[matrix.unmap(ix, jx, dim(window.data$layout$shortest.paths))]
 			})
-			intervals = diff(c(cage.presence.matrix.timestamp, time.bounds[2]))
 			distance.from.all = Rfast::rowsums(distance.matrix, na.rm = T) / Rfast::rowsums(!is.na(distance.matrix), na.rm = T)
+			weighted.distance.from.all = distance.from.all * cage.presence.weighting
 			if(all(is.na(distance.from.all))) distance.from.all = max(window.data$layout$shortest.paths) + 1
 			max.distance.from.all = max(distance.from.all, na.rm = T)
-			mean.distance.from.all = mean(distance.from.all, na.rm = T)
+			mean.distance.from.all = sum(weighted.distance.from.all)
 			min.distance.from.all = min(distance.from.all, na.rm = T)
 			sd.distance.from.all = sd(distance.from.all, na.rm = T)
 			sorted.distances = sort(distance.from.all)
@@ -299,7 +301,7 @@ calculate_metrics_worker = function(window.data, log){
 			lower.distance.from.all = unname(sorted.distances)[floor(length(sorted.distances) * .05)]
 
 			distance.from.each = Rfast::colsums(distance.matrix, na.rm = T) / Rfast::colsums(!is.na(distance.matrix), na.rm = T)
-			weighted.distance.from.each = Rfast::colsums(distance.matrix * intervals, na.rm = T) / diff(time.bounds)
+			weighted.distance.from.each = Rfast::colsums(distance.matrix * cage.presence.weighting, na.rm = T)
 			if(all(is.na(distance.from.each))) distance.from.each = max(window.data$layout$shortest.paths) + 1
 			max.distance.from.each = max(distance.from.each, na.rm = T)
 			#mean.distance.from.each = mean(distance.from.each, na.rm = T) # Same as mean.distance.from.all
