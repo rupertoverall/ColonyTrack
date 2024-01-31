@@ -50,8 +50,7 @@
 #'
 #' @importFrom stats setNames na.omit median sd
 #' @importFrom utils head packageVersion
-#' @importFrom pbapply pboptions pblapply
-#' @importFrom parallel makeForkCluster detectCores stopCluster
+#' @importFrom parallel makePSOCKcluster detectCores parLapply stopCluster
 #'
 #' @export
 calculate_metrics = function(data, days = "all", drop.days = NULL, subjects = "all", drop.subjects = NULL, trim = c(0, 0), estimate = FALSE, log = FALSE, n.cores = parallel::detectCores() - 1){
