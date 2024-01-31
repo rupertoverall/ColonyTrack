@@ -116,7 +116,7 @@ get_defaults = function(metrics.vector = NULL){ # This returns data with missing
 	))
 }
 
-interpolate.features = function(features, mode, seed = 1, verbose = FALSE){ # Interpolate missing data.
+interpolate.features = function(features, mode, interpolation = "random", seed = 1, verbose = FALSE){ # Interpolate missing data.
 	set.seed(seed)
 	zeroed = character()
 	vars = unique(colnames(features))
@@ -127,32 +127,60 @@ interpolate.features = function(features, mode, seed = 1, verbose = FALSE){ # In
 				x = which(colnames(features) == var)
 				na = x[is.na(features[subject, x])]
 				mean = max(mean(features[subject, x], na.rm = T), 1e-12, na.rm = T)
+				median = max(median(features[subject, x], na.rm = T), 1e-12, na.rm = T)
 				sd = max(sd(features[subject, x], na.rm = T), 1e-12, na.rm = T)
-				if(length(na) > 0) features[subject, na] = rnorm(length(na), mean, sd) # Random number from distribution of existing values for this subject.
+				if(length(na) > 0){
+					if(interpolation == "random"){
+						features[subject, na] = rnorm(length(na), mean, sd) # Random number from distribution of existing values for this subject.
+					}else if(interpolation == "mean"){
+						features[subject, na] = mean
+					}else if(interpolation == "median"){
+						features[subject, na] = median
+					}else if(interpolation == "none"){
+						# Leave the NAs in.
+					}else{
+						stop(paste0("'", interpolation, "' is not a valid value for the interpolation parameter."))
+					}
+				}
 			}else if(grepl("^p", mode)){ # Pseudoreplication.
 				y = which(rownames(features) == subject)
 				na = y[is.na(features[y, var])]
 				mean = mean(features[y, var], na.rm = T)
+				median = median(features[y, var], na.rm = T)
 				sd = c(na.omit(sd(features[y, var], na.rm = T)), 0)[1] # SD = 0 will make rnorm return just the mean
 				if(length(na) > 0 & !is.na(mean)){ # Interpolation is needed
-					features[na, var] = rnorm(length(na), mean, sd) # Random number from distribution of existing values for this subject.
+					if(interpolation == "random"){
+						features[na, var] = rnorm(length(na), mean, sd) # Random number from distribution of existing values for this subject.
+					}else if(interpolation == "mean"){
+						features[na, var] = mean
+					}else if(interpolation == "median"){
+						features[na, var] = median
+					}else if(interpolation == "none"){
+						# Leave the NAs in.
+					}else{
+						stop(paste0("'", interpolation, "' is not a valid value for the interpolation parameter."))
+					}
 				}
 			}
 		}
 		if(grepl("^p", mode)){ # Pseudoreplication.
 			if(!all(is.na(features[y, ]))){ # If any NAs (if no data at all for this animal, leave as NA and it will be removed in the next step)...
-				features[y, ][is.na(features[y, ])] = 0 # ...replace missing data with 0.
-				zeroed = c(zeroed, subject)
+				if(interpolation != "none"){
+					features[y, ][is.na(features[y, ])] = 0 # ...replace missing data with 0.
+					zeroed = c(zeroed, subject)
+				}
 			}
 		}
 	}
-	features = features[which(rowVars(features, na.rm = T) > 0), ] # Only subjects that are present at some point.
-	withMissingVars = which(colVars(features) == 0)
-	for(x in withMissingVars){
-		features[, x] = features[, x] + rnorm(length(features[, x]), 1e-24, 1e-24) # Jiggle if the columns are invariant.
+	if(interpolation != "none"){
+		features = features[which(rowVars(features, na.rm = T) > 0), ] # Only subjects that are present at some point.
+		withMissingVars = which(colVars(features) == 0)
+		for(x in withMissingVars){
+			features[, x] = features[, x] + rnorm(length(features[, x]), 1e-24, 1e-24) # Jiggle if the columns are invariant.
+		}
+		if(length(zeroed) > 0 & !verbose) warning(paste0("Some missing data were replaced with zeros (use 'verbose = TRUE' to see which variables were affected)."))
+		if(length(zeroed) > 0 & verbose) warning(paste0("Some missing data were replaced with zeros (", colnames(features)[withMissingVars], ")."))
 	}
-	if(length(zeroed) > 0 & !verbose) warning(paste0("Some missing data were replaced with zeros (use 'verbose = TRUE' to see which variables were affected)."))
-	if(length(zeroed) > 0 & verbose) warning(paste0("Some missing data were replaced with zeros (", colnames(features)[withMissingVars], ")."))
 	return(features)
 }
 
