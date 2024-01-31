@@ -84,7 +84,7 @@ read_data = function(dataFiles, subjectFile, networkFile, eventsFile, cageQualit
 	colnames(transitions) = c("Reader1", "Reader2", "Cage")
 	rownames(transitions) = paste(transitions$Reader1, transitions$Reader2, sep = ".")
 
-	subjects = utils::read.delim(subjectFile, sep = "\t")
+	subjects = utils::read.delim(subjectFile, sep = "\t", colClasses = "character")
 	subjects$Tag = toupper(subjects$Tag) # Make all upper case to ensure matches.
 	if(any(subjects$Tag == "")) warn("Some subjects do not have tags assigned. These have been skipped, so will be absent in the resulting data object.")
 	subjects = subjects[subjects$Tag != "", , drop = FALSE]
@@ -101,12 +101,22 @@ read_data = function(dataFiles, subjectFile, networkFile, eventsFile, cageQualit
 
 	# Read events data
 	events = NULL
-	events = utils::read.delim(eventsFile)
+	events = utils::read.delim(eventsFile, colClasses = "character")
 	if(nrow(events[events$Event == "LightsOn", , drop = FALSE]) == 0) stop("The 'events' file must contain an entry for 'LightsOn'.")
 	# Convert to UTC.
 	events$Start = as.POSIXct(as.numeric(strptime(events$Start, format = "%Y-%m-%d %H:%M:%S", tz = rev(strsplit(events$Start, " ")[[1]])[1])), origin = "1970-01-01 00:00:00", tz = "UTC")
 	events$End = as.POSIXct(as.numeric(strptime(events$End, format = "%Y-%m-%d %H:%M:%S", tz = rev(strsplit(events$End, " ")[[1]])[1])), origin = "1970-01-01 00:00:00", tz = "UTC")
-	events$Value = as.POSIXct(as.numeric(strptime(events$Value, format = "%H:%M:%S", tz = rev(strsplit(events$Value, " ")[[1]])[1])), origin = "1970-01-01 00:00:00", tz = "UTC")
+	# Parse the events.
+	events$UTC = NA # LightsOn in UTC
+	events$Correction = NA # For handling time adjustments (undocumented).
+	for(i in seq_along(events$Value)){
+		if(events$Event[i] == "LightsOn"){
+			raw.s = strsplit(events$Value[i], "\\(")[[1]]
+			events$Correction[i] = sum(as.numeric(strsplit(sub("\\)$", "", raw.s[2]), ":")[[1]]) * c(3600, 60, 1), na.rm = TRUE)
+			s = strsplit(raw.s[1], " ")[[1]]
+			events$UTC[i] = as.POSIXct(as.numeric(strptime(s[1], format = "%H:%M:%S", tz = s[2])), origin = "1970-01-01 00:00:00", tz = "UTC")
+		}
+	}
 
 	# Read cage 'quality' data
 	cage.quality = NULL
@@ -139,15 +149,18 @@ read_data = function(dataFiles, subjectFile, networkFile, eventsFile, cageQualit
 
 	# Set up cluster
 	cluster = parallel::makePSOCKcluster(min(length(dataFiles), parallel::detectCores() - 1)) # One thread per file.
-	raw.data = do.call("rbind", parallel::parLapply(cluster, dataFiles, function(file){
-		raw.data = utils::read.delim(file, sep=";", header = TRUE, comment.char = "#", fileEncoding = "UTF-16LE")
-		names(raw.data) = c("Timestamp", "SubjectID", "X1", "ReaderID", "Duration", "X.3", "X.4", "X.5", "X.6", "X.7", "X.8", "Special", "X.10", "X.11")
-		raw.data = raw.data[, c("Timestamp", "SubjectID", "ReaderID", "Duration")]
+	all.raw.data = do.call("rbind", parallel::parLapply(cluster, dataFiles, function(file){
+		raw.data = utils::read.delim(file, sep=";", header = TRUE, comment.char = "#", fileEncoding = "UTF-16LE", colClasses = "character")
+		names(raw.data) = c("Timestamp", "Tag", "X1", "ReaderID", "Duration", "X.3", "X.4", "X.5", "X.6", "X.7", "X.8", "Special", "X.10", "X.11")
+		raw.data = raw.data[, c("Timestamp", "Tag", "ReaderID", "Duration")]
 		raw.data$Timestamp = as.numeric(sub(",", ".", raw.data$Timestamp)) # In case of European comma decimals.
-		raw.data$SubjectID = toupper(raw.data$SubjectID) # Ensure upper case for ID matching.
+		raw.data$Tag = toupper(raw.data$Tag) # Ensure upper case for ID matching.
 		return(raw.data)
 	}))
 	parallel::stopCluster(cluster)
+
+	# Filter raw data by valid reader IDs.
+	raw.data = all.raw.data[all.raw.data$ReaderID %in% readers, ]
 
 	# Resolve multiple tags (collapse to first in list)
 	msg("Resolving subject ids")
@@ -156,13 +169,14 @@ read_data = function(dataFiles, subjectFile, networkFile, eventsFile, cageQualit
 		tags = trimws(strsplit(tag, ",")[[1]])
 		clean.tags[tag] = tags[1]
 		if(length(tags) > 1){ # Retagging has occurred
-			raw.data$SubjectID[raw.data$SubjectID %in% tags] = tags[1] # Replace all with first tag
+			raw.data$Tag[raw.data$Tag %in% tags] = tags[1] # Replace all with first tag
 		}
 	}
 	names(clean.tags) = subjects$SubjectID
 
 	# Clean up tags not assigned to a subject.
-	clean = raw.data$SubjectID %in% clean.tags
+	clean = raw.data$Tag %in% clean.tags
+	if(length(which(clean)) == 0) stop("No data were found for the subjects listed in the subjects file.")
 	qc$dirty.data.count = sum(!clean) # Should only be control entries.
 	qc$dirty.data = raw.data[!clean, ] # Should only be control entries.
 	raw.data = raw.data[clean, ]
@@ -173,7 +187,7 @@ read_data = function(dataFiles, subjectFile, networkFile, eventsFile, cageQualit
 	msg("Checking timestamp chronology")
 	raw.data = raw.data[Rfast::sort_cor_vectors(seq_along(raw.data$Timestamp), raw.data$Timestamp, stable = T), ]
 	# Clean up raw data and add proper IDs and accurate timestamp.
-	raw.data = data.frame(Timestamp = raw.data$Timestamp, TagID = raw.data$SubjectID, SubjectID = subjects$SubjectID[fastmatch::fmatch(raw.data$SubjectID, subjects$Tag)], ReaderID = raw.data$ReaderID, Duration = raw.data$Duration)
+	raw.data = data.frame(Timestamp = raw.data$Timestamp, TagID = raw.data$Tag, SubjectID = subjects$SubjectID[fastmatch::fmatch(raw.data$Tag, subjects$Tag)], ReaderID = raw.data$ReaderID, Duration = raw.data$Duration)
 
 	# All data are converted to and processed in UTC
 	# Every day starts at lights on for that day and ends at end of the following lights off period.
@@ -239,7 +253,7 @@ read_data = function(dataFiles, subjectFile, networkFile, eventsFile, cageQualit
 	msg("Calculating trajectories")
 	qc$trajectory = list()
 	trajectory.list = lapply(subjects$SubjectID, function(subject){
-		subject.data = raw.data[which(raw.data$TagID == clean.tags[subject]), ]
+		subject.data = raw.data[which(raw.data$Tag == clean.tags[subject]), ]
 		time = NULL
 		trajectory = data.frame(Timestamp = NA, Cage = NA)
 		qc$trajectory[[subject]] <<- list()
@@ -265,22 +279,27 @@ read_data = function(dataFiles, subjectFile, networkFile, eventsFile, cageQualit
 				trajectory = trajectory[which(trajectory$Cage != c("", trajectory$Cage[-length(trajectory$Cage)])), ]
 				if(nrow(trajectory) > 1){ # Check once more after removal of non-cage transitions.
 					# Convert timestamps to date/time
-					datetime = as.POSIXct((trajectory$Timestamp), origin = "1970-01-01 00:00:00", tz = "UTC")
 					time = data.frame(
-						Timestamp = as.numeric(datetime),
-						DateTime = datetime,
-						Day = as.character(format(datetime, format="%F")),
-						Hour = as.numeric(format(datetime, format="%H")),
-						ZTDay = rep(NA, length(datetime)),
-						ZT = rep(NA, length(datetime)),
-						Nighttime = rep(NA, length(datetime)),
-						Cage = rep(NA, length(datetime)),
+						Timestamp = rep(NA, length(trajectory$Timestamp)),
+						DateTime = rep(NA, length(trajectory$Timestamp)),
+						Day = rep(NA, length(trajectory$Timestamp)),
+						Hour = rep(NA, length(trajectory$Timestamp)),
+						ZTDay = rep(NA, length(trajectory$Timestamp)),
+						ZT = rep(NA, length(trajectory$Timestamp)),
+						Nighttime = rep(NA, length(trajectory$Timestamp)),
+						Cage = rep(NA, length(trajectory$Timestamp)),
 						stringsAsFactors = FALSE
 					)
 					light.cycle.blocks = events[events$Event == "LightsOn", , drop = FALSE] # Each block processed separately then merged
 					for(i in seq_along(rownames(light.cycle.blocks))){
-						this.block = which(datetime >= light.cycle.blocks[i, "Start"] & datetime <= light.cycle.blocks[i, "End"])
-						lights.on = unlist(strsplit(format(light.cycle.blocks[i, "Value"], format = "%Y-%m-%d %H:%M:%S"), " "))
+						this.block = which(trajectory$Timestamp >= light.cycle.blocks[i, "Start"] & trajectory$Timestamp <= light.cycle.blocks[i, "End"])
+						time$Timestamp[this.block] = trajectory$Timestamp[this.block]
+						if(light.cycle.blocks[i, "Correction"] != 0) time$Timestamp[this.block] = time$Timestamp[this.block] + light.cycle.blocks[i, "Correction"]
+						datetime = as.POSIXct(time$Timestamp[this.block], origin = "1970-01-01 00:00:00", tz = "UTC")
+						time$DateTime[this.block] = datetime
+						time$Day[this.block] = as.character(format(datetime, format="%F"))
+						time$Hour[this.block] = as.numeric(format(datetime, format="%H"))
+						lights.on = unlist(strsplit(format(as.POSIXct(light.cycle.blocks[i, "UTC"]), format = "%Y-%m-%d %H:%M:%S"), " "))
 						ZT0 = strptime(paste0(time$Day[this.block], " ", lights.on[2]), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 						previous.days = as.character(format(as.POSIXct(time$Day[this.block], tz = "UTC") - (3600 * 24), format="%F"))
 						ZT0.previous = strptime(paste0(previous.days, " ", lights.on[2]), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
